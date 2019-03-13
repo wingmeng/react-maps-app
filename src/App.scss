@@ -1,35 +1,157 @@
-.App {
-  text-align: center;
+@charset "UTF-8";
+
+/** 基准颜色定义 **/
+$color-primary: #2857ad;
+$color-info   : #266cef;
+$color-success: #58cc67;
+$color-warning: #e6b563;
+$color-danger : #e66963;
+$color-text   : #333;
+$color-muted  : #ababab;
+
+/** 主题色 **/
+$body-bg      : #f8f8f8;
+$header-bg    : #2f3640;
+$aside-bg     : darken($header-bg, 6.5%);
+
+/** 变量 **/
+$base-font-md: 16px;
+$base-font-sm: 14px;
+$base-spacing: 20px;
+$base-line-height: 1.5;
+
+$header-ht: 3.25rem;
+$aside-wt: 246px;
+
+body {
+	line-height: $base-line-height;
+	overflow: hidden;
+	color: $color-text;
+	font-size: $base-font-md;
+	background: $body-bg;
 }
 
-.App-logo {
-  animation: App-logo-spin infinite 20s linear;
-  height: 40vmin;
-  pointer-events: none;
+// 头部
+#header {
+	position: relative;
+	display: flex;
+	align-items: center;
+
+	height: $header-ht;
+
+	background: $header-bg;
+
+	> h1 {
+		display: flex;
+		align-items: center;
+
+		width: $aside-wt;
+		height: 100%;
+		overflow: hidden;
+
+		font-size: 1.5rem;
+		color: #fff;
+		background: $aside-bg;
+		transition: all .2s;
+
+		> span {
+			flex: 1;
+			max-width: calc(100% - 42px);  // 42px 是按钮宽度
+			padding-left: $base-spacing;
+			box-sizing: border-box;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+	}
+
+	// 侧边栏显示切换按钮
+	.btn-menu {margin-left: $base-spacing / 2;}
+
+	.btn-close {
+		display: none;
+		color: #fff;
+	}
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+.header-btn {
+	$font-size: 1.2rem;
+	font-size: $font-size;
+	border: 1px solid transparent;  // 增大可点击区域
+	border-width: calc((#{$header-ht} - #{$font-size} * #{$base-line-height}) / 2);
+	opacity: .75;
+
+	&:hover {opacity: 1;}
 }
 
-.App-link {
-  color: #61dafb;
+#main {
+	display: flex;
+	height: calc(100vh - #{$header-ht});
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+// 侧边栏
+.aside {
+	width: $aside-wt;
+	height: 100%;
+	background: $aside-bg;
+	transition: all .2s;
 }
 
-@import "./demo.scss";
+.map-container {
+	flex: 1;
+	height: 100%;
+}
+
+// mini 模式
+.is-aside-mini {
+	#header > h1,
+	.aside {
+		width: 0;
+		padding: 0;
+	}
+}
+
+@media (max-width: 480px) {
+	body {font-size: $base-font-sm;}
+
+	.aside,
+	#header > h1 {
+		position: absolute;
+		z-index: 1;
+		width: $aside-wt;
+	}
+
+	#header .btn-close {display: block;}
+
+	// mini 模式
+	.is-aside-mini {
+		#header > h1,
+		.aside {
+			transform: translateX(-100%);
+		}
+	}
+}
+
+.loading-tip {
+	padding: $base-spacing / 2 $base-spacing;
+	color: $color-muted;
+
+	&::before {
+		content: "";
+		display: inline-block;
+		width: 1em;
+		height: 1em;
+		margin-right: .5em;
+		vertical-align: -0.15em;
+		background: url(./icon/loading.svg) center no-repeat;
+		background-size: contain; 
+	}
+}
+
+// 辅助类
+.text-primary {color: $color-primary;}
+.text-info {color: $color-info;}
+.text-success {color: $color-success;}
+.text-warning {color: $color-warning;}
+.text-danger {color: $color-danger;}
+.text-muted {color: $color-muted;}
