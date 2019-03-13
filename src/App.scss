@@ -4,7 +4,7 @@
 $color-primary: #2857ad;
 $color-info   : #266cef;
 $color-success: #58cc67;
-$color-warning: #e6b563;
+$color-warning: #fcb324;
 $color-danger : #e66963;
 $color-text   : #333;
 $color-muted  : #ababab;
@@ -100,6 +100,8 @@ body {
 .map-container {
 	flex: 1;
 	height: 100%;
+
+	> .loading-tip {position: absolute;}
 }
 
 // mini 模式
@@ -132,21 +134,7 @@ body {
 	}
 }
 
-.loading-tip {
-	padding: $base-spacing / 2 $base-spacing;
-	color: $color-muted;
-
-	&::before {
-		content: "";
-		display: inline-block;
-		width: 1em;
-		height: 1em;
-		margin-right: .5em;
-		vertical-align: -0.15em;
-		background: url(./icon/loading.svg) center no-repeat;
-		background-size: contain; 
-	}
-}
+@import "tipMsg";
 
 // 辅助类
 .text-primary {color: $color-primary;}
