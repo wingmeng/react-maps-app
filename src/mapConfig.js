@@ -1,5 +1,5 @@
 export default {
-  center: {lat: 39.906931, lng: 116.39756},  // 初始化中心点（北京天安门国旗台）
+  center: {lat: 39.9069676409, lng: 116.3976057338},  // 初始化中心点（北京天安门国旗台）
   zoomLv: 16,  // 初始化缩放级别
   key: 'AIzaSyCU5WMfYm4M3VDqaMtCCAdhF-6me9dVS7I',
 	_url: [

@@ -1,34 +1,13 @@
 import React, { Component } from 'react'
-// import requireMap from './requireMap'
-// import axios from 'axios'
 import IconBtn from './iconBtn'
 import Map from './map'
+import * as Search from './searchNearby'
 import './App.scss'
-
-
-
-// var clientId = "HCFKSRBOE34ZWFFURMZYDY1F4HT2D3OHGOXFMU12H5Y3LTVU";
-// var clientSecret = "G4MBBX2XNBGQJYQ3QJJY1N2ZPVTB1R05CHPT5N5LM3X4P5IL";
-// var url =
-//   "https://api.foursquare.com/v2/venues/search?client_id=" +
-//   clientId +
-//   "&client_secret=" +
-//   clientSecret +
-//   "&v=20180803&ll=" +
-//   40.7413549 +
-//   // place.marker.getPosition().lat() +
-//   "," +
-//   // place.marker.getPosition().lng() +
-//   -73.99802439999996 +
-//   "&limit=1";
-
-// // $script(url, function(a,b) {
-// //   console.log(a, b)
-// // });
 
 class App extends Component {
   state = {
-    isMiniMode: false
+    isMiniMode: false,
+    hotels: []
   }
 
   initMiniMode() {
@@ -53,9 +32,25 @@ class App extends Component {
   }
 
   // 地图初始化完成回调。`map` 为当前地图实例
-  onMapReady(map) {
+  onMapReady(map, cb) {
+    // 平移或缩放后在地图空闲时触发（类似防抖处理）
+    window.google.maps.event.addListener(map, 'idle', () => {
+      let {lat, lng} = map.getCenter();
 
-    console.log(map)
+      Search.getNearby(lat(), lng())
+        .then(data => {
+          if (data.meta.code === 200) {
+            this.setState({hotels: data.response.venues})    
+          } else {
+            this.setState({hotels: []})
+          }
+
+          cb(this.state.hotels)
+        })
+        .catch(() => {
+          console.error('请求失败，请重试')
+        })
+    })
   }
 
   // 生命周期：首次渲染之前
@@ -63,13 +58,26 @@ class App extends Component {
     let timer = null;
 
     this.initMiniMode();
+
     window.addEventListener('resize', () => {
       clearTimeout(timer);
 
       timer = setTimeout(() => {
         this.initMiniMode()
-      }, 20);
-    }, false);
+      }, 20)
+    }, false)
+  }
+
+  // 生命周期：DOM 就绪
+  componentDidMount() {
+    // Search.getNearby().then(data => {
+    //   this.setState({hotels: data.response.venues})
+    // })
+  }
+
+  // 生命周期：接收到新参数，重新渲染前
+  componentWillUpdate() {
+    // console.log(this.state.hotels)
   }
 
   render() {
@@ -90,10 +98,15 @@ class App extends Component {
         </header>
         <main id="main">
           <aside className="aside">
-
+            <form>
+              <input type="text" placeholder="keywords"></input>
+            </form>
+            <ul>
+              <li>列表</li>
+            </ul>
           </aside>
           <Map className="map-container" id="mapBox"
-            mapCallback={(map) => this.onMapReady(map)} />
+            mapCallback={(map, cb) => this.onMapReady(map, cb)} />
         </main>
       </div>
     );

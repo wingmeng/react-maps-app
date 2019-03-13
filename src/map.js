@@ -6,7 +6,8 @@ import mapAPI from './mapConfig'
 class Map extends Component {
   state = {
     isLoaded: false,  // 地图是否加载成功
-    map: null  // 初始化后的地图实例
+    map: null,  // 初始化后的地图实例
+    marks: []
   }
 
   // 地图初始化
@@ -33,7 +34,9 @@ class Map extends Component {
         }
       });
 
-      this.props.mapCallback(this.state.map);
+      this.props.mapCallback(this.state.map, (points) => {
+        this.showMarks(points)
+      })
     }
   }
 
@@ -70,6 +73,67 @@ class Map extends Component {
     })
   }
 
+  showMarks(points) {
+    const map = this.state.map;
+    let lastInfoWin = null;
+    let latlngbounds = new window.google.maps.LatLngBounds();  // 点集合
+
+    points.forEach(function(point) {
+      let {lat, lng} = point.location;
+      let marker = new window.google.maps.Marker({
+          position: {lat: Number(lat), lng: Number(lng)},
+          title: point.name,
+          map: map
+      });
+
+      // var content =
+      //     '<div class="map-info-window">' +
+      //         '<h4>Coordinate - ' + point.title + '</h4>' +
+      //         '<p><b>Lat/Lng:</b> ' + point.pos.lat + ',' + point.pos.lng + '</p>' +
+      //         '<p><b>Capacity:</b> 5 MWh</p>' +
+      //         '<p><b>ID Code:</b> ' + ((+new Date()).toString(32).toUpperCase()) + '</p>' +
+      //     '</div>';
+
+      // var infowindow = new google.maps.InfoWindow({
+      //     content: content
+      // });            
+
+      // marker.addListener('click', function() {
+      //   closeLastInfoWin();
+        
+      //   infowindow.open(mapObj, marker);
+      //   curInfoWin = infowindow;
+
+      //   if (mapObj.getZoom() < 12) {
+      //       mapObj.setZoom(12);
+      //   }
+      //   mapObj.panTo(marker.getPosition());
+      // });
+
+    // (function(marker, infowindow) {
+    // 	google.maps.event.addListener(marker, 'click', function(e) {
+    // 		closeLastInfoWin();
+              
+    // 		infowindow.open(mapObj, marker);
+    // 		curInfoWin = infowindow;
+
+    // 		if (mapObj.getZoom() < 12) {
+    // 			mapObj.setZoom(12);
+    // 		}
+    // 		mapObj.panTo(marker.getPosition());
+    // 	});
+    // })(marker, infowindow);
+
+      // 将每个坐标点的经纬度都添加到集合对象中
+      // latlngbounds.extend(marker.position);
+    });
+
+    // Center map and adjust Zoom based on the position of all markers.
+    // map.setCenter(latlngbounds.getCenter());
+    // map.fitBounds(latlngbounds);
+  }
+
+  // 生命周期：首次渲染之前
   componentWillMount() {
     if (!this.state.isLoaded) {
       this.loadMap(mapAPI.url)
@@ -79,11 +143,23 @@ class Map extends Component {
     }
   }
 
+  // 生命周期：接收到新参数，重新渲染前
+  // state.marks 的更新并不会触发地图重新渲染
+  // 个人猜想应该是 React 没有在视图中找到 marks 的引用，所以忽略了更新
+  // componentWillUpdate() {
+  //   console.log(this.state.marks)
+  // }
+
+  // componentDidUpdate() {
+  //   console.log(this.state.marks)
+  //   console.log('地图 更新完了')
+  // }
+
   render() {
     return (
       <div className={this.props.className}>
         {!this.state.isLoaded && (
-          <p className="loading-tip">map is loading...</p>
+          <p className="tip-msg is-loading">map is loading...</p>
         )}
         <div id={this.props.id} style={
           {height: this.props.height || '100%'}
