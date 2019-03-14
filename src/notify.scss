@@ -1,0 +1,84 @@
+@charset "UTF-8";
+
+@import "./variables";
+
+.notify {
+	position: absolute;	
+	padding: $base-spacing / 2 $base-spacing;
+	line-height: 1;
+  white-space: nowrap;
+  visibility: visible;
+  opacity: 1;
+  transition: all .3s;
+  
+  &.invisible {
+    visibility: hidden;
+    opacity: 0;
+  }
+
+	// 方位
+	&.pos-top-left {
+		top: $base-spacing;
+		left: $base-spacing;
+	}
+	&.pos-top-center {
+		top: $base-spacing;
+		left: 50%;
+		transform: translateX(-50%);
+	}
+  &.pos-top-right {
+		top: $base-spacing;
+		right: $base-spacing;
+	}
+  &.pos-center {
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+	}
+  &.pos-bottom-left {
+		bottom: $base-spacing;
+		left: $base-spacing;
+	}
+ 	&.pos-bottom-center {
+		bottom: $base-spacing;
+		left: 50%;
+		transform: translateX(-50%);
+	}
+  &.pos-bottom-right {
+		bottom: $base-spacing;
+		right: $base-spacing;
+	}
+
+	// 主题色
+	&.darken {background: rgba(#000, .8);}
+	&.lighten {background: rgba(#fff, .8);}
+
+	&::before {
+		content: "";
+		display: inline-block;
+		width: 1em;
+		height: 1em;
+		margin-right: .5em;
+		vertical-align: -0.15em;
+		background: url(about:blank) center no-repeat;
+		background-size: contain;
+	}
+
+	&.is-loading {
+		z-index: $zIndex-loading;
+		color: $color-muted;
+
+		&::before {
+			background-image: url("./icon/loading.svg");
+		}
+	}
+
+	&.is-notice {
+		z-index: $zIndex-notice;
+		color: $color-warning;
+		
+		&::before {
+			background-image: url("./icon/warning.svg");
+		}
+	}
+}
