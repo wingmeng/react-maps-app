@@ -2,40 +2,41 @@ import React, { Component } from 'react'
 import $script from 'scriptjs'
 import axios from 'axios'
 import mapAPI from './mapConfig'
+import Notify from './notify'
+import markerIcon from './icon/marker.png';
 
 class Map extends Component {
   state = {
-    isLoaded: false,  // 地图是否加载成功
+    isLoaded: false,  // 地图是否加载完成
     map: null,  // 初始化后的地图实例
-    marks: []
+    markers: []
   }
 
   // 地图初始化
   initMap() {
     if (window.google && window.google.maps) {
-      this.setState(() => {
-        return {
-          isLoaded: true,
-          map: new window.google.maps.Map(document.getElementById(this.props.id), {
-            center: mapAPI.center,
-            zoom: mapAPI.zoomLv,
+      this.setState(() => ({
+        isLoaded: true,
+        map: new window.google.maps.Map(document.getElementById(this.props.id), {
+          center: mapAPI.center,
+          zoom: mapAPI.zoomLv,
 
-            scaleControl: true,  // 比例尺
-            clickableIcons: false,  // 禁用 POI 点击
+          scaleControl: true,  // 比例尺
+          clickableIcons: false,  // 禁用 POI 点击
 
-          // greedy     : 当用户在屏幕上滑动（拖动）时，地图一律平移。
-          //              换言之，单指滑动和双指滑动都会使地图平移。
-          // cooperative: 用户必须单指滑动来滚动页面，双指滑动来平移地图。
-          //              如果用户单指滑动地图，地图上会出现一个叠加项，提示用户使用双指来移动地图。
-          // none       : 无法对地图执行平移或双指张合操作。
-          // auto       : 默认值。根据页面是否可以滚动采用 cooperative 或 greedy 行为。
-            gestureHandling: 'greedy'
-          })
-        }
-      });
+        // greedy     : 当用户在屏幕上滑动（拖动）时，地图一律平移。
+        //              换言之，单指滑动和双指滑动都会使地图平移。
+        // cooperative: 用户必须单指滑动来滚动页面，双指滑动来平移地图。
+        //              如果用户单指滑动地图，地图上会出现一个叠加项，提示用户使用双指来移动地图。
+        // none       : 无法对地图执行平移或双指张合操作。
+        // auto       : 默认值。根据页面是否可以滚动采用 cooperative 或 greedy 行为。
+          gestureHandling: 'greedy'
+        })
+      }));
 
       this.props.mapCallback(this.state.map, (points) => {
-        this.showMarks(points)
+        this.removeMarkers()
+        this.addMarkers(points)
       })
     }
   }
@@ -50,7 +51,7 @@ class Map extends Component {
 
     return new Promise((resolve, reject) => {
       // 先尝试加载谷歌国际版地图
-      axios.get(urls.GMap_i18n, {timeout: 5000})
+      axios.get(urls.GMap_i18n, {timeout: 1000})  // @临时
         .then(() => {
           $script(urls.GMap_i18n, () => {
             this.initMap();
@@ -73,64 +74,71 @@ class Map extends Component {
     })
   }
 
-  showMarks(points) {
-    const map = this.state.map;
-    let lastInfoWin = null;
-    let latlngbounds = new window.google.maps.LatLngBounds();  // 点集合
+  // 清除所有 markers
+  removeMarkers() {
+    this.state.markers.forEach(marker => {
+      marker.setMap(null)
+    })
+  }
 
-    points.forEach(function(point) {
+  // 展示 markers
+  addMarkers(points) {
+    const map = this.state.map;
+    const MapFactory = window.google.maps;
+    const closeLastInfoWin = function() {
+      if (lastInfoWin) {
+        lastInfoWin.close();  // 关闭上一个 infoWindow
+      }
+    };
+    let lastInfoWin = null;
+    let lastMarker = null;
+    let markers = [];
+
+    // 点击地图空白处关闭 infoWindow
+    MapFactory.event.addListener(map, 'click', closeLastInfoWin);
+
+    points.forEach((point, idx, pointArr) => {
       let {lat, lng} = point.location;
-      let marker = new window.google.maps.Marker({
-          position: {lat: Number(lat), lng: Number(lng)},
+      let marker = new MapFactory.Marker({
+          position: {lat: Number(lat), lng: Number(lng)},  // 强类型转换，防止参数异常
+          icon: markerIcon,  // 自定义图标
           title: point.name,
+          zIndex: idx + 1,
+          animation: MapFactory.Animation.DROP,  // 下落动画
           map: map
       });
 
-      // var content =
-      //     '<div class="map-info-window">' +
-      //         '<h4>Coordinate - ' + point.title + '</h4>' +
-      //         '<p><b>Lat/Lng:</b> ' + point.pos.lat + ',' + point.pos.lng + '</p>' +
-      //         '<p><b>Capacity:</b> 5 MWh</p>' +
-      //         '<p><b>ID Code:</b> ' + ((+new Date()).toString(32).toUpperCase()) + '</p>' +
-      //     '</div>';
+      // 中国地址从大到小
+      let address = (point.location.cc.toLowerCase() === 'cn'
+        ? point.location.formattedAddress.reverse()
+        : point.location.formattedAddress).join(' ');
 
-      // var infowindow = new google.maps.InfoWindow({
-      //     content: content
-      // });            
+      let infowindow = new MapFactory.InfoWindow({
+        content: `<div class="map-info-window">
+            <h4>${point.name}</h4>
+            <p><strong>地址:</strong> ${address}</p>
+          </div>`
+      });
 
-      // marker.addListener('click', function() {
-      //   closeLastInfoWin();
-        
-      //   infowindow.open(mapObj, marker);
-      //   curInfoWin = infowindow;
+      markers.push(marker);
 
-      //   if (mapObj.getZoom() < 12) {
-      //       mapObj.setZoom(12);
-      //   }
-      //   mapObj.panTo(marker.getPosition());
-      // });
+      (function(marker, infowindow) {
+        MapFactory.event.addListener(marker, 'click', function(e) {
+          closeLastInfoWin();
 
-    // (function(marker, infowindow) {
-    // 	google.maps.event.addListener(marker, 'click', function(e) {
-    // 		closeLastInfoWin();
-              
-    // 		infowindow.open(mapObj, marker);
-    // 		curInfoWin = infowindow;
+          if (lastMarker) {
+            lastMarker.setZIndex(lastMarker.getZIndex() - pointArr.length)
+          }
 
-    // 		if (mapObj.getZoom() < 12) {
-    // 			mapObj.setZoom(12);
-    // 		}
-    // 		mapObj.panTo(marker.getPosition());
-    // 	});
-    // })(marker, infowindow);
+          infowindow.open(map, marker);
+          lastInfoWin = infowindow;
+          map.panTo(marker.getPosition());  // 平移居中
+          marker.setZIndex(marker.getZIndex() + pointArr.length)  // 点击置顶
+        });
+      })(marker, infowindow)
+    })
 
-      // 将每个坐标点的经纬度都添加到集合对象中
-      // latlngbounds.extend(marker.position);
-    });
-
-    // Center map and adjust Zoom based on the position of all markers.
-    // map.setCenter(latlngbounds.getCenter());
-    // map.fitBounds(latlngbounds);
+    this.setState({markers})
   }
 
   // 生命周期：首次渲染之前
@@ -138,29 +146,41 @@ class Map extends Component {
     if (!this.state.isLoaded) {
       this.loadMap(mapAPI.url)
         .catch(() => {
-          console.error('地图加载失败')
+          this.props.globalNotify('地图加载失败')
         });
     }
   }
 
   // 生命周期：接收到新参数，重新渲染前
-  // state.marks 的更新并不会触发地图重新渲染
-  // 个人猜想应该是 React 没有在视图中找到 marks 的引用，所以忽略了更新
-  // componentWillUpdate() {
-  //   console.log(this.state.marks)
-  // }
+  componentWillUpdate() {
+    // 疑问：此处为什么无法第一时间获得更新后的 state.markers ？
+    // 居然比 componentDidUpdate 慢半拍？
+    // console.log('WillUpdate', this.state.markers)
+  }
 
-  // componentDidUpdate() {
-  //   console.log(this.state.marks)
-  //   console.log('地图 更新完了')
-  // }
+  // 生命周期：重新渲染后
+  componentDidUpdate() {
+    // console.log('DidUpdate', this.state.markers)
+  }
 
   render() {
     return (
       <div className={this.props.className}>
         {!this.state.isLoaded && (
-          <p className="tip-msg is-loading">map is loading...</p>
+          <Notify type="loading">地图载入中...</Notify>
         )}
+        {this.props.isSearching && (
+          <Notify type="loading" theme="darken" position="tc">搜索中...</Notify>
+        )}
+
+        {/* 地图已载入 && 未处于搜索状态 && 搜索结果为空 */}
+        {this.state.isLoaded
+          && !this.props.isSearching
+          && this.state.markers.length === 0
+          && (
+            <Notify type="notice" theme="darken" position="bc">当前区域无搜索结果</Notify>
+          )
+        }
         <div id={this.props.id} style={
           {height: this.props.height || '100%'}
         }/>
