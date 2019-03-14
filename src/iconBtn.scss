@@ -1,0 +1,12 @@
+@charset "UTF-8";
+
+@import "./variables";
+
+.icon-button {
+	font-size: $icon-button-font;
+	background: transparent;
+	border: 5px solid transparent;  // 增大可点击区域	
+	opacity: .75;
+
+	&:hover {opacity: 1;}
+}
