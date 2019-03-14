@@ -4,7 +4,9 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
-body, h1 {margin: 0;}
+body, h1, h4, ul, p {margin: 0;}
+
+h1, h4 {font-weight: 400;}
 
 body,
 button,

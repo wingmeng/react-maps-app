@@ -1,0 +1,29 @@
+@charset "UTF-8";
+
+/** 基准颜色定义 **/
+$color-primary: #fcb324;
+$color-info   : #266cef;
+$color-success: #58cc67;
+$color-warning: $color-primary;
+$color-danger : #e66963;
+$color-text   : #333;
+$color-muted  : #ababab;
+
+/** 主题色 **/
+$bg-body      : #f8f8f8;
+$bg-header    : #2f3640;
+$bg-aside     : darken($bg-header, 6.5%);
+
+/** 基准尺寸 **/
+$base-font-md: 16px;
+$base-font-sm: 14px;
+$base-spacing: 20px;
+$base-line-height: 1.5;
+
+/** zIndex **/
+$zIndex-aside-fixed: 5;
+$zIndex-notice: 10;
+$zIndex-loading: 20;
+
+/** 组件 **/
+$icon-button-font: 1.2rem;
