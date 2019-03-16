@@ -6,15 +6,20 @@ import Notify from './notify'
 import markerIcon from './icon/marker.png';
 
 class Map extends Component {
+  MapFactory = null;
+
   state = {
     isLoaded: false,  // 地图是否加载完成
     map: null,  // 初始化后的地图实例
-    markers: []
+    markers: [],
+    infoWindow: null
   }
 
   // 地图初始化
   initMap() {
     if (window.google && window.google.maps) {
+      this.MapFactory = window.google.maps;
+
       this.setState(() => ({
         isLoaded: true,
         map: new window.google.maps.Map(document.getElementById(this.props.id), {
@@ -34,9 +39,18 @@ class Map extends Component {
         })
       }));
 
+      if (this.props.geoLocation) {
+        this.geoLocation()  // HTML5 地理定位
+      }
+
+      // 点击地图空白处关闭 infoWindow
+      this.MapFactory.event.addListener(this.state.map, 'click', () => {
+        this.closeInfoWindow()
+      })
+
       this.props.mapCallback(this.state.map, (points) => {
         this.removeMarkers()
-        this.addMarkers(points)
+        this.buildMarkers(points)
       })
     }
   }
@@ -82,63 +96,98 @@ class Map extends Component {
   }
 
   // 展示 markers
-  addMarkers(points) {
+  buildMarkers(points) {
     const map = this.state.map;
-    const MapFactory = window.google.maps;
+    const MapFactory = this.MapFactory;
     const closeLastInfoWin = function() {
-      if (lastInfoWin) {
-        lastInfoWin.close();  // 关闭上一个 infoWindow
-      }
+      // if (lastInfoWin) {
+      //   lastInfoWin.close();  // 关闭上一个 infoWindow
+      // }
     };
-    let lastInfoWin = null;
     let lastMarker = null;
     let markers = [];
 
-    // 点击地图空白处关闭 infoWindow
-    MapFactory.event.addListener(map, 'click', closeLastInfoWin);
-
     points.forEach((point, idx, pointArr) => {
       let {lat, lng} = point.location;
-      let marker = new MapFactory.Marker({
-          position: {lat: Number(lat), lng: Number(lng)},  // 强类型转换，防止参数异常
-          icon: markerIcon,  // 自定义图标
-          title: point.name,
-          zIndex: idx + 1,
-          animation: MapFactory.Animation.DROP,  // 下落动画
-          map: map
-      });
 
       // 中国地址从大到小
       let address = (point.location.cc.toLowerCase() === 'cn'
         ? point.location.formattedAddress.reverse()
         : point.location.formattedAddress).join(' ');
 
-      let infowindow = new MapFactory.InfoWindow({
-        content: `<div class="map-info-window">
-            <h4>${point.name}</h4>
-            <p><strong>地址:</strong> ${address}</p>
-          </div>`
+      let marker = new MapFactory.Marker({
+          position: {lat: Number(lat), lng: Number(lng)},  // 强类型转换，防止参数异常
+          icon: markerIcon,  // 自定义图标
+          data: {
+            name: point.name,
+            address: address
+          },
+          zIndex: idx + 1,
+          id: point.id,
+          animation: MapFactory.Animation.DROP,  // 下落动画
+          map: map
       });
-
-      markers.push(marker);
-
-      (function(marker, infowindow) {
-        MapFactory.event.addListener(marker, 'click', function(e) {
-          closeLastInfoWin();
+      
+      (() => {
+        MapFactory.event.addListener(marker, 'click', () => {
+          this.closeInfoWindow();
 
           if (lastMarker) {
             lastMarker.setZIndex(lastMarker.getZIndex() - pointArr.length)
           }
 
-          infowindow.open(map, marker);
-          lastInfoWin = infowindow;
-          map.panTo(marker.getPosition());  // 平移居中
+          this.buildInfoWindow(marker)
+          map.panTo(marker.getPosition())  // 平移居中
           marker.setZIndex(marker.getZIndex() + pointArr.length)  // 点击置顶
+          this.props.onMarkerClick(marker.id)
         });
-      })(marker, infowindow)
+      })(marker)
+
+      markers.push(marker)
     })
 
     this.setState({markers})
+  }
+
+  closeInfoWindow() {
+    console.log(this)
+    if (this.state.infoWindow) {
+      this.state.infoWindow.close()
+    }
+  }
+
+  buildInfoWindow(marker) {
+    let { data } = marker;
+    let infoWindow = new this.MapFactory.InfoWindow({
+      content: `<div class="map-info-window">
+          <h4>${data.name}</h4>
+          <p><strong>地址:</strong> ${data.address}</p>
+        </div>`
+    });
+
+    infoWindow.open(this.state.map, marker)
+    this.setState({infoWindow})
+  }
+
+  // HTML5 地理定位
+  geoLocation() {
+    if (navigator.geolocation) {
+      let timer = setTimeout(() => {
+        this.props.globalNotify('Geolocation 地理定位超时')
+      }, 15 * 1e3);
+
+      navigator.geolocation.getCurrentPosition(pos => {
+        const position = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude
+        };
+
+        clearTimeout(timer)
+        this.state.map.setCenter(position)
+      })
+    } else {
+      this.props.globalNotify('您的设备不支持 Geolocation 地理定位')
+    }
   }
 
   // 生命周期：首次渲染之前
@@ -160,7 +209,7 @@ class Map extends Component {
 
   // 生命周期：重新渲染后
   componentDidUpdate() {
-    // console.log('DidUpdate', this.state.markers)
+    this.props.getMarkers(this.state.markers)
   }
 
   render() {
@@ -170,7 +219,7 @@ class Map extends Component {
           <Notify type="loading">地图载入中...</Notify>
         )}
         {this.props.isSearching && (
-          <Notify type="loading" theme="darken" position="tc">搜索中...</Notify>
+          <Notify type="loading" theme="lighten" position="cc">搜索中...</Notify>
         )}
 
         {/* 地图已载入 && 未处于搜索状态 && 搜索结果为空 */}
@@ -181,7 +230,7 @@ class Map extends Component {
             <Notify type="notice" theme="darken" position="bc">当前区域无搜索结果</Notify>
           )
         }
-        <div id={this.props.id} style={
+        <div id={this.props.id} role="application" style={
           {height: this.props.height || '100%'}
         }/>
       </div>
