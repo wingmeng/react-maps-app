@@ -1,0 +1,36 @@
+.form-group {
+  + & {margin-top: $base-spacing / 2;}
+}
+
+.form-control {
+  width: 100%;
+  padding: .4em .6em;
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid $color-border;
+  border-radius: $form-element-radius;
+}
+
+.input-group {
+  display: flex;
+  padding: $base-spacing / 2;
+
+  > .form-control {
+    flex: 1;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-radius: 0;
+
+    &:first-child:not(:last-child) {
+      border-radius: $form-element-radius 0 0 $form-element-radius;
+    }
+  }
+
+  > button {
+    border-radius: 0;
+
+    &:last-child {
+      border-radius: 0 $form-element-radius $form-element-radius 0;
+    }
+  }
+}
