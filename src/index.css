@@ -12,6 +12,7 @@ body,
 button,
 input,
 select {
+  font-size: 100%;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
     "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
     sans-serif;
@@ -27,9 +28,11 @@ pre {
 
 main {display: block;}
 
+a {text-decoration: none;}
+
 .icon {
   width: 1em; height: 1em;
-  vertical-align: -0.15em;
+  vertical-align: -0.1em;
   fill: currentColor;
   overflow: hidden;
 }
