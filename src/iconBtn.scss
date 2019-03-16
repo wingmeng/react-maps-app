@@ -2,11 +2,43 @@
 
 @import "./variables";
 
+@mixin buildThemeBtn($tag, $color) {
+  &.btn-#{$tag} {
+    color: #fff;
+    background: $color;
+    opacity: 1;
+
+    &:not(:disabled):hover {
+      background: darken($color, 8);
+    }
+
+    &:active {
+      background: $color;
+    }
+  }
+}
+
 .icon-button {
 	font-size: $icon-button-font;
 	background: transparent;
-	border: 5px solid transparent;  // 增大可点击区域	
-	opacity: .75;
+  border: 5px solid transparent;  // 增大可点击区域
+  border-radius: $form-element-radius;
+  opacity: .75;
+  cursor: pointer;
 
-	&:hover {opacity: 1;}
+  &:hover {opacity: 1;}
+
+  &:disabled {
+    cursor: not-allowed;
+    filter: grayscale(80%);
+  }
+
+  > svg {
+    + span {margin: 0 5px;}
+  }
+
+  @include buildThemeBtn("primary", $color-primary);
+  @include buildThemeBtn("info", $color-info);
+  @include buildThemeBtn("success", $color-success);
+  @include buildThemeBtn("danger", $color-danger);
 }
