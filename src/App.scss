@@ -24,7 +24,7 @@ a {color: $color-info;}
 	background: $bg-header;
 
 	.icon-button {
-		border-width: ($header-ht - $icon-button-font) * $base-line-height / 2;
+		border-width: ($header-ht - $icon-button-font * $base-line-height) / 2;
 	}
 
 	// 侧边栏显示切换按钮
@@ -68,9 +68,41 @@ a {color: $color-info;}
 // 侧边栏
 .aside {
 	width: $aside-wt;
-	height: 100%;
+  height: 100%;
+  overflow: hidden;
 	background: $bg-aside;
 	transition: all .2s;
+}
+
+.list {
+  height: calc(100% - 58px);  // 58px 是 form 高度
+  padding: 0 $base-spacing / 2;
+  overflow: auto;
+  list-style: none;
+
+  a {
+    display: block;
+    height: 32px;
+    margin-bottom: 5px;
+    line-height: 32px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    font-size: .95rem;
+    color: darken(#fff, 30);
+
+    &:hover,
+    &.is-active {
+      color: $color-primary;
+    }
+
+    &.is-active {
+      padding-left: calc(1em + 5px);
+      background: url("./icon/marker.png") left center no-repeat;
+      background-size: 1em auto;
+      box-shadow: 0 1px 0;
+    }
+  }
 }
 
 .map-container {
@@ -116,16 +148,7 @@ a {color: $color-info;}
 	}
 }
 
-.icon-button {
-	$font-size: 1.2rem;
-	font-size: $font-size;
-	background: transparent;
-	border: 5px solid transparent;  // 增大可点击区域
-	border-width: calc((#{$header-ht} - #{$font-size} * #{$base-line-height}) / 2);
-	opacity: .75;
-
-	&:hover {opacity: 1;}
-}
+@import "./form";
 
 // 辅助类
 .text-primary {color: $color-primary;}

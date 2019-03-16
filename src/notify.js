@@ -1,4 +1,4 @@
-import React, {Component} from 'react'
+import React, { Component } from 'react'
 import './notify.scss'
 
 class Notify extends Component {
@@ -10,7 +10,7 @@ class Notify extends Component {
   componentDidMount() {
     let delay = Number(this.props.delay);
 
-    if (delay) {      
+    if (delay) {
       setTimeout(() => {
         this.setState({live: false})
       }, delay)
