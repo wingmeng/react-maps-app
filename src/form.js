@@ -1,5 +1,10 @@
-import React, { Component } from 'react'
+import React, { Component } from 'react';
 
+/**
+ * 【作废】
+ * 这个组件对当前产品来说封装的太重了，加大了当前 app 的逻辑复杂度
+ * 适合为其单独开一个新项目
+ */
 class Form extends Component {
   formItems = {};
 

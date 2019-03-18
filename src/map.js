@@ -1,58 +1,44 @@
-import React, { Component } from 'react'
-import $script from 'scriptjs'
-import axios from 'axios'
-import mapAPI from './mapConfig'
-import Notify from './notify'
-import markerIcon from './icon/marker.png';
+import React from 'react';
+import PropTypes from 'prop-types';
+import $script from 'scriptjs';
+import axios from 'axios';
+import mapAPI from './mapConfig';
+import Notify from './notify';
 
-class Map extends Component {
-  MapFactory = null;
+/**
+ * Map 地图组件
+ * @interface {string} id - 地图容器 id
+ * @interface {numbner} [height] - 地图容器的高度，默认为 100%
+ * @interface {function} [onMapReady] - 地图初始化完成后的回调函数
+ * @interface {function} [onMapClick] - 地图点击事件
+ * @interface {function} [onMapDragend] - 地图拖放结束事件
+ * @interface {function} [onMapZoomChanged] - 地图缩放事件
+ * @interface {boolean} [geoLocation] - 是否开启 geolocation 地理定位
+ * @interface {object} [mapNotice] - 地图状态通知信息配置
+ */
+class Map extends React.Component {
+  mapElm = null;
 
   state = {
-    isLoaded: false,  // 地图是否加载完成
+    isLoaded: false,  // 地图是否加载成功
+    isFailed: false,  // 地图是否加载失败
     map: null,  // 初始化后的地图实例
-    markers: [],
-    infoWindow: null
+    geoLocation: null
   }
 
-  // 地图初始化
-  initMap() {
-    if (window.google && window.google.maps) {
-      this.MapFactory = window.google.maps;
-
-      this.setState(() => ({
-        isLoaded: true,
-        map: new window.google.maps.Map(document.getElementById(this.props.id), {
-          center: mapAPI.center,
-          zoom: mapAPI.zoomLv,
-
-          scaleControl: true,  // 比例尺
-          clickableIcons: false,  // 禁用 POI 点击
-
-        // greedy     : 当用户在屏幕上滑动（拖动）时，地图一律平移。
-        //              换言之，单指滑动和双指滑动都会使地图平移。
-        // cooperative: 用户必须单指滑动来滚动页面，双指滑动来平移地图。
-        //              如果用户单指滑动地图，地图上会出现一个叠加项，提示用户使用双指来移动地图。
-        // none       : 无法对地图执行平移或双指张合操作。
-        // auto       : 默认值。根据页面是否可以滚动采用 cooperative 或 greedy 行为。
-          gestureHandling: 'greedy'
-        })
-      }));
-
-      if (this.props.geoLocation) {
-        this.geoLocation()  // HTML5 地理定位
-      }
-
-      // 点击地图空白处关闭 infoWindow
-      this.MapFactory.event.addListener(this.state.map, 'click', () => {
-        this.closeInfoWindow()
-      })
-
-      this.props.mapCallback(this.state.map, (points) => {
-        this.removeMarkers()
-        this.buildMarkers(points)
-      })
+  // 生命周期：首次渲染之前
+  componentWillMount() {
+    if (!this.state.isLoaded) {
+      this.loadMap(mapAPI.url)
+        .catch(() => {
+          this.setState({isFailed: true})
+        });
     }
+  }
+
+  // 生命周期：首次渲染完成
+  componentDidMount() {
+    this.mapElm = document.getElementById(this.props.id);
   }
 
   // 加载地图
@@ -63,8 +49,11 @@ class Map extends Component {
       urls[tag] = url;
     }
 
+    // 异步加载地图
     return new Promise((resolve, reject) => {
-      // 先尝试加载谷歌国际版地图
+      // 先尝试加载谷歌地图国际版
+      // 这里的超时时间原本打算使用 navigator.connection API 来动态调整的
+      // 但这是个实验中的 API，只有 Chrome 支持，故未采用
       axios.get(urls.GMap_i18n, {timeout: 1000})  // @临时
         .then(() => {
           $script(urls.GMap_i18n, () => {
@@ -73,11 +62,11 @@ class Map extends Component {
           });
         })
 
-        // 加载超时，尝试加载中国大陆版谷歌地图
+        // 加载超时，尝试加载谷歌地图中国大陆版
         .catch(() => {
-          // 中国大陆版的地图不支持跨域请求脚本，故使用 script 引入方式
-          // 使用定时器来检测加载超时
-          let timer = setTimeout(reject, 5000);
+          // 大陆版的地图不支持跨域请求脚本，故使用 script 方式引入
+          // 使用定时器来检测是否加载超时
+          let timer = setTimeout(reject, 6000);
 
           $script(urls.GMap_cn, () => {
             clearTimeout(timer);
@@ -88,92 +77,71 @@ class Map extends Component {
     })
   }
 
-  // 清除所有 markers
-  removeMarkers() {
-    this.state.markers.forEach(marker => {
-      marker.setMap(null)
-    })
-  }
-
-  // 展示 markers
-  buildMarkers(points) {
-    const map = this.state.map;
-    const MapFactory = this.MapFactory;
-    const closeLastInfoWin = function() {
-      // if (lastInfoWin) {
-      //   lastInfoWin.close();  // 关闭上一个 infoWindow
-      // }
-    };
-    let lastMarker = null;
-    let markers = [];
-
-    points.forEach((point, idx, pointArr) => {
-      let {lat, lng} = point.location;
-
-      // 中国地址从大到小
-      let address = (point.location.cc.toLowerCase() === 'cn'
-        ? point.location.formattedAddress.reverse()
-        : point.location.formattedAddress).join(' ');
-
-      let marker = new MapFactory.Marker({
-          position: {lat: Number(lat), lng: Number(lng)},  // 强类型转换，防止参数异常
-          icon: markerIcon,  // 自定义图标
-          data: {
-            name: point.name,
-            address: address
-          },
-          zIndex: idx + 1,
-          id: point.id,
-          animation: MapFactory.Animation.DROP,  // 下落动画
-          map: map
-      });
+  // 地图初始化
+  initMap() {
+    if (window.google && window.google.maps) {
+      const MapConstr = window.google.maps;
       
-      (() => {
-        MapFactory.event.addListener(marker, 'click', () => {
-          this.closeInfoWindow();
+      this.setState(() => ({
+        isLoaded: true,
+        map: new MapConstr.Map(this.mapElm, {
+          center: mapAPI.center,
+          zoom: mapAPI.zoomLv,
+          scaleControl: true,  // 比例尺
+          clickableIcons: false,  // 禁用默认 POI 点击
 
-          if (lastMarker) {
-            lastMarker.setZIndex(lastMarker.getZIndex() - pointArr.length)
-          }
+          /**
+           * greedy     : 当用户在屏幕上滑动（拖动）时，地图一律平移。
+                          换言之，单指滑动和双指滑动都会使地图平移。
+           * cooperative: 用户必须单指滑动来滚动页面，双指滑动来平移地图。
+                          如果用户单指滑动地图，地图上会出现一个叠加项，提示用户使用双指来移动地图。
+           * none       : 无法对地图执行平移或双指张合操作。
+           * auto       : 默认值。根据页面是否可以滚动采用 cooperative 或 greedy 行为。
+           */
+          gestureHandling: 'greedy'
+        })
+      }));
 
-          this.buildInfoWindow(marker)
-          map.panTo(marker.getPosition())  // 平移居中
-          marker.setZIndex(marker.getZIndex() + pointArr.length)  // 点击置顶
-          this.props.onMarkerClick(marker.id)
-        });
-      })(marker)
-
-      markers.push(marker)
-    })
-
-    this.setState({markers})
-  }
-
-  closeInfoWindow() {
-    console.log(this)
-    if (this.state.infoWindow) {
-      this.state.infoWindow.close()
+      this.bindMapEvent(MapConstr);
+      this.props.geoLocation && this.geoLocation();  // HTML5 地理定位
     }
   }
 
-  buildInfoWindow(marker) {
-    let { data } = marker;
-    let infoWindow = new this.MapFactory.InfoWindow({
-      content: `<div class="map-info-window">
-          <h4>${data.name}</h4>
-          <p><strong>地址:</strong> ${data.address}</p>
-        </div>`
-    });
+  // 绑定地图事件（可拓展）
+  // API 详情：http://www.runoob.com/googleapi/ref-map.html
+  bindMapEvent(MapConstr) {
+    const props = this.props;
 
-    infoWindow.open(this.state.map, marker)
-    this.setState({infoWindow})
+    // 地图就绪回调
+    props.onMapReady && props.onMapReady(MapConstr, this.state.map);
+
+    // 地图点击回调（不包含地图覆盖物）
+    props.onMapClick && MapConstr.event.addListener(
+      this.state.map, 'click', (event) => {
+        props.onMapClick(event, this.state.map)
+      }
+    );
+
+    // 地图拖放回调
+    props.onMapDragend && MapConstr.event.addListener(
+      this.state.map, 'dragend', () => {
+        props.onMapDragend(this.state.map)
+      }
+    );
+
+    // 地图缩放事件
+    props.onMapZoomChanged && MapConstr.event.addListener(
+      this.state.map, 'zoom_changed', () => {
+        props.onMapZoomChanged(this.state.map)
+      }
+    );
   }
 
   // HTML5 地理定位
   geoLocation() {
     if (navigator.geolocation) {
       let timer = setTimeout(() => {
-        this.props.globalNotify('Geolocation 地理定位超时')
+        this.setState({geoLocation: 'timeout'})
       }, 15 * 1e3);
 
       navigator.geolocation.getCurrentPosition(pos => {
@@ -182,54 +150,44 @@ class Map extends Component {
           lng: pos.coords.longitude
         };
 
-        clearTimeout(timer)
-        this.state.map.setCenter(position)
+        clearTimeout(timer);
+        this.state.map.setCenter(position);
       })
-    } else {
-      this.props.globalNotify('您的设备不支持 Geolocation 地理定位')
     }
-  }
-
-  // 生命周期：首次渲染之前
-  componentWillMount() {
-    if (!this.state.isLoaded) {
-      this.loadMap(mapAPI.url)
-        .catch(() => {
-          this.props.globalNotify('地图加载失败')
-        });
-    }
-  }
-
-  // 生命周期：接收到新参数，重新渲染前
-  componentWillUpdate() {
-    // 疑问：此处为什么无法第一时间获得更新后的 state.markers ？
-    // 居然比 componentDidUpdate 慢半拍？
-    // console.log('WillUpdate', this.state.markers)
-  }
-
-  // 生命周期：重新渲染后
-  componentDidUpdate() {
-    this.props.getMarkers(this.state.markers)
   }
 
   render() {
+    const mapNotice = this.props.mapNotice;
+
     return (
       <div className={this.props.className}>
-        {!this.state.isLoaded && (
+        {this.props.children}
+
+        {!this.state.isLoaded && !this.state.isFailed && (
           <Notify type="loading">地图载入中...</Notify>
         )}
-        {this.props.isSearching && (
-          <Notify type="loading" theme="lighten" position="cc">搜索中...</Notify>
+
+        {this.state.isFailed && (
+          <p className="text-center text-danger" style={{marginTop: 20}}>
+            地图加载失败！请刷新重试
+          </p>
         )}
 
-        {/* 地图已载入 && 未处于搜索状态 && 搜索结果为空 */}
-        {this.state.isLoaded
-          && !this.props.isSearching
-          && this.state.markers.length === 0
-          && (
-            <Notify type="notice" theme="darken" position="bc">当前区域无搜索结果</Notify>
-          )
-        }
+        {this.state.geoLocation === 'timeout' && (
+          <Notify type="notice" delay={4000} theme="darken" position="br">
+            地理定位超时
+          </Notify>
+        )}
+
+        {/* 其他需要显示到地图上的通知信息 */}
+        {mapNotice && (
+          <Notify type={mapNotice.type}
+            position={mapNotice.position}
+            delay={mapNotice.delay}
+            theme={mapNotice.theme}
+            >{mapNotice.content}</Notify>
+        )}
+
         <div id={this.props.id} role="application" style={
           {height: this.props.height || '100%'}
         }/>
@@ -238,14 +196,21 @@ class Map extends Component {
   }
 }
 
-/**
- * TODO: 后期实现根据访问IP的归属地自动切换地图
- * 查询 IP，确定归属地
- * url: http://pv.sohu.com/cityjson?ie=utf-8
- * return:
-    var returnCitySN = {"cip": "173.244.44.77", "cid": "US", "cname": "UNITED STATES"};
-    var returnCitySN = {"cip": "218.16.97.162", "cid": "441900", "cname": "广东省东莞市"};
- *
-*/
+Map.propTypes = {
+  id: PropTypes.string.isRequired,
+  height: PropTypes.number,
+  onMapReady: PropTypes.func,
+  onMapClick: PropTypes.func,
+  onMapDragend: PropTypes.func,
+  onMapZoomChanged: PropTypes.func,
+  geoLocation: PropTypes.bool,
+  mapNotice: PropTypes.shape({
+    type: PropTypes.oneOf(['loading', 'notice']),
+    content: PropTypes.string,
+    delay: PropTypes.number,
+    theme: PropTypes.oneOf(['darken', 'lighten']),
+    position: PropTypes.oneOf(['tc', 'tr', 'cc', 'bl', 'bc'])
+  })
+}
 
 export default Map;

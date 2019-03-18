@@ -118,6 +118,16 @@ a {color: $color-info;}
   }
 }
 
+.sources-tip {
+  position: absolute;
+  left: 0;
+  bottom: 30px;
+  z-index: 1;
+  padding: 0 .5em;
+  font-size: 12px;
+  background: rgba(#fff, .8);
+}
+
 // mini 模式
 .is-aside-mini {
 	.app-title,
@@ -157,3 +167,4 @@ a {color: $color-info;}
 .text-warning {color: $color-warning;}
 .text-danger {color: $color-danger;}
 .text-muted {color: $color-muted;}
+.text-center {text-align: center;}
