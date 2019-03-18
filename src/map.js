@@ -5,6 +5,9 @@ import axios from 'axios';
 import mapAPI from './mapConfig';
 import Notify from './notify';
 
+// 地图命名空间
+const NS_map = 'google.maps';
+
 /**
  * Map 地图组件
  * @interface {string} id - 地图容器 id
@@ -23,7 +26,7 @@ class Map extends React.Component {
     isLoaded: false,  // 地图是否加载成功
     isFailed: false,  // 地图是否加载失败
     map: null,  // 初始化后的地图实例
-    geoLocation: null
+    geoLocation: this.props.geoLocation
   }
 
   // 生命周期：首次渲染之前
@@ -49,43 +52,73 @@ class Map extends React.Component {
       urls[tag] = url;
     }
 
-    // 异步加载地图
     return new Promise((resolve, reject) => {
-      // 先尝试加载谷歌地图国际版
-      // 这里的超时时间原本打算使用 navigator.connection API 来动态调整的
-      // 但这是个实验中的 API，只有 Chrome 支持，故未采用
-      axios.get(urls.GMap_i18n, {timeout: 1000})  // @临时
-        .then(() => {
-          $script(urls.GMap_i18n, () => {
-            this.initMap();
-            resolve();
-          });
+      // 使用定时器来检测是否加载超时
+      let timer = setTimeout(reject, 15 * 1e3);
+
+      // 使用第三方 API，根据访客 IP 获取当前位置
+      // 官网：https://ipapi.co/
+      axios.get('https://ipapi.co/json', {timeout: 5000})
+        .then(res => res.status === 200 ? res.data : Promise.reject())
+        .then(data => {
+          let url = urls.GMap_i18n;
+
+          // 来自中国
+          if (data.country.toLowerCase() === 'cn') {
+            url = urls.GMap_cn;
+          }
+
+          $script(url, () => {
+            clearTimeout(timer);
+
+            if (this.state.geoLocation) {
+              // 使用 IP 定位成功，取消 HTML5 geolocation API 定位
+              this.setState({geoLocation: null});
+              this.initMap({lat: data.latitude, lng: data.longitude});
+            } else {
+              this.initMap()
+            }
+
+            resolve()
+          })
         })
 
-        // 加载超时，尝试加载谷歌地图中国大陆版
+        // 第三方 IP 定位 API 异常的后备方案
         .catch(() => {
-          // 大陆版的地图不支持跨域请求脚本，故使用 script 方式引入
-          // 使用定时器来检测是否加载超时
-          let timer = setTimeout(reject, 6000);
+          // 先尝试加载谷歌地图国际版
+          axios.get(urls.GMap_i18n, {timeout: 5000})
+            .then(() => {
+              $script(urls.GMap_i18n, () => {
+                clearTimeout(timer);
+                this.initMap();
+                resolve();
+              })
+            })
 
-          $script(urls.GMap_cn, () => {
-            clearTimeout(timer);
-            this.initMap();
-            resolve();
-          });
-        });
+            // 加载超时，加载谷歌地图中国版
+            .catch(() => {
+              $script(urls.GMap_cn, () => {
+                clearTimeout(timer);
+                this.initMap();
+                resolve();
+              })
+            })
+        })
     })
   }
 
-  // 地图初始化
-  initMap() {
-    if (window.google && window.google.maps) {
-      const MapConstr = window.google.maps;
-      
+  // 地图初始化，center 为 IP 定位中心点，如无则使用缺省中心点
+  initMap(center) {
+    // 依次检验地图全局变量是否挂载到 window 上
+    // 类似于：window.google && window.google.maps
+    const MapConstr = NS_map.split('.')
+      .reduce((total, cur) => total[cur] || null, window);
+
+    if (MapConstr) {
       this.setState(() => ({
         isLoaded: true,
         map: new MapConstr.Map(this.mapElm, {
-          center: mapAPI.center,
+          center: center || mapAPI.center,
           zoom: mapAPI.zoomLv,
           scaleControl: true,  // 比例尺
           clickableIcons: false,  // 禁用默认 POI 点击
@@ -103,7 +136,7 @@ class Map extends React.Component {
       }));
 
       this.bindMapEvent(MapConstr);
-      this.props.geoLocation && this.geoLocation();  // HTML5 地理定位
+      this.state.geoLocation && this.geoLocation();  // HTML5 地理定位
     }
   }
 
