@@ -1,10 +1,11 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import axios from 'axios';
 import $script from 'scriptjs';
 import './iconBtn.scss';
 
-// 加载 svg 图标
-$script('//at.alicdn.com/t/font_1084739_y0tftj5rsk.js');
+// svg 图标，from: iconfont.cn
+const iconsUrl = '//at.alicdn.com/t/font_1084739_y0tftj5rsk.js';
 
 // Icon names:
 const iconNames = [
@@ -26,26 +27,53 @@ const iconNames = [
  * @interface {boolean} [disabled] - 按钮是否处于禁用状态
  * @interface {function} [onClick] - 按钮点击事件
  * @interface {string} [icon] - 按钮图标的名称，如不设置，则不显示图标。
- */ 
-function IconBtn(props) {
-  return (
-    <button className={`icon-button ${props.className || ''}`}
-      type={props.type || ''}
-      title={props.title || ''}
-      style={{...props.style}}
-      disabled={props.disabled}
-      onClick={() => props.onClick ? props.onClick() : false}
-    >
-      {props.icon && (
-        <svg className="icon" aria-hidden="true">
-          <use href={`#${props.icon}`}></use>
-        </svg>
-      )}
-      {props.children && (
-        <span>{props.children}</span>
-      )}
-    </button>
-  )
+ */
+class IconBtn extends React.Component {
+  state = {
+    isIconLoaded: true
+  }
+
+  // 生命周期：即将渲染
+  componentWillMount() {
+    axios.get(iconsUrl, { timeout: 5000 })
+      .then(() => {
+        $script(iconsUrl)
+      })
+
+      // 图标加载失败
+      .catch(() => {
+        this.setState({isIconLoaded: false})
+      })
+  }
+
+  render() {
+    const props = this.props;
+
+    return (
+      <button className={`icon-button ${props.className || ''}`}
+        type={props.type || ''}
+        title={props.title || ''}
+        style={{...props.style}}
+        disabled={props.disabled}
+        onClick={() => props.onClick ? props.onClick() : false}
+      >
+        {props.icon && this.state.isIconLoaded && (
+          <svg className="icon" aria-hidden="true">
+            <use href={`#${props.icon}`}></use>
+          </svg>
+        )}
+
+        {props.children && (
+          <span>{props.children}</span>
+        )}
+
+        {/* 图标加载失败，且无文本，则显示 title 避免一片空白 */}
+        {!this.state.isIconLoaded && !props.children && (
+          <small>{props.title}</small>
+        )}
+      </button>
+    )
+  }
 }
 
 IconBtn.propTypes = {
