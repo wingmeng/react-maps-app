@@ -61,6 +61,7 @@ a {color: $color-info;}
 }
 
 #main {
+  position: relative;
 	display: flex;
 	height: calc(100vh - #{$header-ht});
 }
@@ -89,17 +90,19 @@ a {color: $color-info;}
     text-overflow: ellipsis;
     overflow: hidden;
     font-size: .95rem;
-    color: darken(#fff, 30);
+    padding-left: calc(1em + 7px);
+    color: #fff;
+    background: url("./icon/marker.png") left center no-repeat;
+    background-size: 1em auto;
+    opacity: .7;
 
     &:hover,
     &.is-active {
       color: $color-primary;
+      opacity: 1;
     }
 
     &.is-active {
-      padding-left: calc(1em + 5px);
-      background: url("./icon/marker.png") left center no-repeat;
-      background-size: 1em auto;
       box-shadow: 0 1px 0;
     }
   }
@@ -111,11 +114,28 @@ a {color: $color-info;}
 	height: 100%;
 }
 
-.map-info-window {
-  > h4 {
-    margin-bottom: 5px;
-    font-size: 1.1rem;
-  }
+.info-title {
+  $spacing: 5px;
+
+  padding-bottom: $spacing;
+  margin-bottom: $spacing;
+  font-size: 1.1rem;
+  border-bottom: 1px dotted $color-muted;
+}
+
+.info-body {display: flex;}
+.info-content {
+  flex: 1;
+  padding-right: $base-spacing / 2;
+  line-height: 1.8;
+}
+.info-photo {
+  height: 90px;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: lighten($color-muted, 20) url("./icon/loading.svg") center no-repeat;
+
+  > img {width: 120px;}
 }
 
 .sources-tip {
@@ -126,6 +146,8 @@ a {color: $color-info;}
   padding: 0 .5em;
   font-size: 12px;
   background: rgba(#fff, .8);
+
+  img {vertical-align: middle;}
 }
 
 // mini 模式
@@ -147,7 +169,16 @@ a {color: $color-info;}
 		width: $aside-wt !important;
 	}
 
-	#header .btn-close {display: block;}
+  #header .btn-close {display: block;}
+
+  .info-body {
+    flex-direction: column;
+  }
+  .info-photo {
+    height: 120px;
+
+    > img {width: 100%}
+  }
 
 	// mini 模式
 	.is-aside-mini {
