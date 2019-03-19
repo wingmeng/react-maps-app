@@ -1,68 +1,33 @@
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+# Hotel Locations
 
-## Available Scripts
+一个酒店（宾馆）地图搜索的网页应用，主要为用户提供附近酒店的地图位置标注、关键词搜索、酒店详情等服务。
 
-In the project directory, you can run:
+## 安装及部署
 
-### `npm start`
+- 使用 `npm install` 安装所有项目依赖项
+- 使用 `npm start` 启动前端服务器
+- 使用 `npm server` 启动后端服务器
+- 使用 `npm run build` 打包发布项目
 
-Runs the app in the development mode.<br>
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+> 如你安装了 Yarn，可使用 `yarn` 来代替上述代码中的 `npm`
 
-The page will reload if you make edits.<br>
-You will also see any lint errors in the console.
+## 开始使用
 
-### `npm test`
+1. 成功启动前端和后端服务器后，使用浏览器访问 `http://localhost:3000` 即可打开应用；
+2. 地图会自动定位到当前访问设备的 IP 所在地区，以此为中心点，搜索附近 5 公里范围的酒店（宾馆）；
+3. 你可以拖动地图来更新搜索中心点，每次地图拖放后会自动更新搜索；
+4. 搜索结果会显示在页面侧栏，以列表形式列出酒店名称，同时地图上会有相应的标记点；
+5. 你也可以通过键入关键词来过滤搜索结果，列表及地图的展示条目会随之同步更新；
+6. 当点击列表上的酒店名称时，地图上对应的标记点会居中显示并弹出概要信息窗口；
+7. 概要信息包含酒店名称、照片、地址、电话、价格和评分信息；
+8. 点击概要信息上的酒店名称链接可跳转到详情页。
 
-Launches the test runner in the interactive watch mode.<br>
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## 支持平台
 
-### `npm run build`
+PC 端、移动端主流浏览器
 
-Builds the app for production to the `build` folder.<br>
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## 第三方 API
 
-The build is minified and the filenames include the hashes.<br>
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (Webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/code-splitting
-
-### Analyzing the Bundle Size
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size
-
-### Making a Progressive Web App
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app
-
-### Advanced Configuration
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/advanced-configuration
-
-### Deployment
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/deployment
-
-### `npm run build` fails to minify
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify
+- [Google Maps](https://cloud.google.com/maps-platform/)
+- [Yelp Business Search](https://www.yelp.com/developers/documentation/v3/business_search)
+- [ipapi](https://ipapi.co/)
