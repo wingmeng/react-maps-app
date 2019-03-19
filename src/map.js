@@ -58,7 +58,7 @@ class Map extends React.Component {
 
       // 使用第三方 API，根据访客 IP 获取当前位置
       // 官网：https://ipapi.co/
-      axios.get('https://ipapi.co/json', {timeout: 5000})
+      axios.get('https://ipapi.co/json', { timeout: 5000 })
         .then(res => res.status === 200 ? res.data : Promise.reject())
         .then(data => {
           let url = urls.GMap_i18n;
@@ -112,7 +112,7 @@ class Map extends React.Component {
     // 依次检验地图全局变量是否挂载到 window 上
     // 类似于：window.google && window.google.maps
     const MapConstr = NS_map.split('.')
-      .reduce((total, cur) => total[cur] || null, window);
+      .reduce((total, cur) => total ? total[cur] : null, window);
 
     if (MapConstr) {
       this.setState(() => ({
@@ -137,6 +137,8 @@ class Map extends React.Component {
 
       this.bindMapEvent(MapConstr);
       this.state.geoLocation && this.geoLocation();  // HTML5 地理定位
+    } else {
+      this.setState({isFailed: true})
     }
   }
 
