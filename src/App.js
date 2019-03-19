@@ -8,21 +8,25 @@ import * as PlacesAPI from './placesAPI';
 import './App.scss';
 import markerIcon from './icon/marker.png';
 
+const COLOR_success = '#58cc67';  // from _variables.scss
+const SCREEN_sm = 480;   // 小屏设备尺寸基准
+
 class App extends React.Component {
   MapConstr = null;  // 地图构造函数
   placeMap  = null;  // 当前地图实例
-  mapZoomLv = null;  // 地图缩放等级
 
   state = {
-    isMiniMode:   false,  // 侧边栏切换标识
-    isSearching:  false,  // API  搜索状态标识
-    markers:      [],     // 当前区域所有标记点
-    infoWindow:   null,   // 当前   marker 的 infoWindow
-    mapNotice:    null,   // 地图状态通知信息
-    notification: '',     // 全局通知信息
-    query:        '',     // 查询关键词
-    placeId:      null,   // 当前地点 id
-    places:       []      // 当前所有地点数据
+    isMiniMode:   false,    // 侧边栏切换标识
+    isSearching:  false,    // API  搜索状态标识
+    markers:      [],       // 当前区域所有标记点
+    infoWindow:   null,     // 当前   marker 的 infoWindow
+    radiusCircle: null,     // 圆形搜索半径
+    mapNotice:    null,     // 地图状态通知信息
+    notification: '',       // 全局通知信息
+    radiusRange:  5 * 1e3,  // 搜索范围（m）
+    query:        '',       // 查询关键词
+    placeId:      null,     // 当前地点 id
+    places:       []        // 当前所有地点数据
   }
 
   // 生命周期：首次渲染之前
@@ -44,10 +48,8 @@ class App extends React.Component {
   // 初始化侧边栏显示
   // 小屏默认隐藏侧边栏
   initMiniMode() {
-    let screen_sm = 480;
-
     this.toggleAside(
-      document.body.clientWidth <= screen_sm ? 'close' : 'open'
+      document.body.clientWidth <= SCREEN_sm ? 'close' : 'open'
     )
   }
 
@@ -60,7 +62,7 @@ class App extends React.Component {
         case 'close':
           return { isMiniMode: true }
 
-        // toggle  
+        // toggle
         default:
           return { isMiniMode: !state.isMiniMode }
       }
@@ -73,69 +75,37 @@ class App extends React.Component {
     this.placeMap = map;
     this.mapZoomLv = map.getZoom();
 
-    const { event } = MapConstr;
+    [
+      'idle',  // “空闲”（当前瓦片图加载完毕）事件
+      'dragend'  // 拖动结束事件
+    ].forEach(evtName => {
+      let handle = MapConstr.event.addListener(map, evtName, () => {
+        const { lat, lng } = map.getCenter();
 
-    // 监听地图“空闲”（当前瓦片图加载完毕）事件
-    // 完成初始化搜索后移除 idle 事件
-    event.addListenerOnce(map, 'idle', (e) => {
-      const { sw, ne } = this.getCurBounds(map);
+        this.onSearch(lat(), lng())
+          .then(() => {
+            this.buildMarkers(map);
 
-      this.onSearch(sw, ne)
-        .then(() => {
-          this.buildMarkers(map);
-        })
-        .catch(err => {
-          this.setGlobalNotify(err)
-        })
+            // 完成初始化搜索后移除 idle 事件
+            if (evtName === 'idle') {
+              MapConstr.event.removeListener(handle)
+            }
+          })
+          .catch(err => {
+            this.setGlobalNotify(err)
+          })
+      })
     })
   }
 
-  // 地图触发事件回调
-  onMapEvent(map, evtName) {
-    const { sw, ne } = this.getCurBounds(map);
-
-    // 上一次请求完成后再请求，过滤高频发送请求
-    if (!this.state.isSearching) {
-      /**
-       * 这段的作用是过滤掉重复请求
-       * 每次地图缩放时判断是放大还是缩小：
-       *  1.放大 - 不再调用 API 重复搜索
-       *  2.缩小 - 地图缩放等级小于上次记录的值时，更新对比等级
-       */
-      if (evtName === 'zoom_changed') {
-        let curZoomLv = map.getZoom();
-
-        // 地图放大时（视野降低）不再重复搜索
-        if (curZoomLv >= this.mapZoomLv) {
-          return
-        } else {
-          // 当视图缩放等级小于上一次记录值，重置等级
-          this.mapZoomLv = curZoomLv
-        }
-      }
-
-      this.onSearch(sw, ne)
-        .then(() => {
-          this.buildMarkers(map)
-        })
-        .catch(err => {
-          this.setGlobalNotify(err)
-        })
+  onListClick(id) {
+    // 小屏且侧边栏展开，点击地图后先隐藏侧栏
+    if (document.body.clientWidth <= SCREEN_sm
+      && !this.state.isMiniMode) {
+      this.toggleAside('close')
     }
-  }
 
-  // 获取地图当前视区地理范围（西南角和东北角的一个矩形区域）
-  // 地图“空闲”（当前瓦片图加载完毕）时，才有值，否则返回 undefined
-  getCurBounds(map) {
-    let {ga, ma} = map.getBounds();
-    // ga: {j: 116.38962347977167, l: 116.40558798782831}  // lng
-    // ma: {j: 39.89942035908015, l: 39.914514091354995}  // lat
-    if (ga && ma) {
-      let sw = `${ma.j},${ga.j}`;
-      let ne = `${ma.l},${ga.l}`;
-
-      return { sw, ne }
-    }
+    this.setCurPlaceId(id, 'list')
   }
 
   // 设置当前位置 id
@@ -151,8 +121,8 @@ class App extends React.Component {
     }
   }
 
-  // 搜索 sw 和 ne 矩形区域的地点
-  onSearch(sw, ne) {
+  // 搜索给定经纬度附近的地点
+  onSearch(lat, lng) {
     // 开启搜索提示
     this.setState(() => (
       {
@@ -167,6 +137,8 @@ class App extends React.Component {
     ));
 
     return new Promise((resolve, reject) => {
+      // 疑问：搜索超时定时器触发后如何中断当前 fetch 请求？
+      // 网上的 new AbortController() 兼容性堪忧
       let timer = setTimeout(() => {
         this.setState(() => (
           {
@@ -178,7 +150,7 @@ class App extends React.Component {
         reject('搜索超时，请重试');
       }, 15 * 1e3);
 
-      PlacesAPI.searchList(sw, ne, this.state.query)
+      PlacesAPI.searchNearby(lat, lng, this.state.query, this.state.radiusRange)
         .then(data => {
           clearTimeout(timer);
 
@@ -190,19 +162,11 @@ class App extends React.Component {
             }
           ));
 
-          if (data.meta.code === 200) {
-            this.setState({
-              places: data.response.venues.map(item => (
-                {
-                  id: item.id,
-                  name: item.name,
-                  location: item.location
-                }
-              ))
-            })
-          } else {
+          if (data.error) {
             this.setState({places: []});
             reject('服务端接口异常，搜索失败');
+          } else {
+            this.setState({places: data.businesses})
           }
 
           // 搜索结果为空
@@ -213,7 +177,7 @@ class App extends React.Component {
                   content: '当前无搜索结果',
                   type: 'notice',
                   theme: 'darken',
-                  position: 'bc'
+                  position: 'cc'
                 }
               }
             ));
@@ -227,54 +191,67 @@ class App extends React.Component {
   // 更新查询关键词
   updateQuery(value) {
     this.setState({query: value})
-
-    PlacesAPI.getPhotos('4bcc3b9868f976b07a386283')
-      .then(res => {
-        console.log(res)
-      })
   }
 
   // 表单提交事件
   onFormSubmit(e) {
     e.preventDefault();
-    
-    const map = this.placeMap;
-    const { sw, ne } = this.getCurBounds(map);
 
-    this.onSearch(sw, ne)
+    const map = this.placeMap;
+    const { lat, lng } = map.getCenter();
+
+    this.onSearch(lat(), lng())
       .then(() => {
-        this.buildMarkers(map)
+        this.buildMarkers(map);
       })
       .catch(err => {
         this.setGlobalNotify(err)
       })
   }
 
+  buildRadiusCircle(map, center) {
+    // 清除上一个区域
+    if (this.state.radiusCircle) {
+      this.state.radiusCircle.setMap(null);
+      this.setState({radiusCircle: null});
+    }
+
+    let { lat, lng } = center;
+    let radiusCircle = new this.MapConstr.Circle({
+      strokeColor: COLOR_success,
+      strokeOpacity: 0.5,
+      strokeWeight: 2,
+      fillColor: COLOR_success,
+      fillOpacity: 0.15,
+      radius: this.state.radiusRange,
+      center: {lat: lat(), lng: lng()},
+      map
+    });
+
+    this.MapConstr.event.addListener(radiusCircle, 'click', () => {
+      this.closeInfoWindow()
+    });
+
+    this.setState({radiusCircle});
+  }
+
   // 创建并显示 marker
   buildMarkers(map) {
     let markers = [];
     let lastMarker = null;
+    let bounds = new this.MapConstr.LatLngBounds();  // 界限集合
 
     this.removeMarkers();
     this.state.places.forEach(place => {
-      let { lat, lng } = place.location;
-
-      // 中国地址从大到小
-      let address = (place.location.cc.toLowerCase() === 'cn'
-        ? place.location.formattedAddress.reverse()
-        : place.location.formattedAddress)
-        .join(' ');
-
+      let { latitude, longitude } = place.coordinates;
       let marker = new this.MapConstr.Marker({
           position: {
-            lat: Number(lat),  // 强类型转换，防止参数异常
-            lng: Number(lng)
+            lat: Number(latitude),  // 强类型转换，防止参数异常
+            lng: Number(longitude)
           },
           icon: markerIcon,  // 自定义图标
           data: {  // 存储 place 数据
-            id: place.id,
-            name: place.name,
-            address: address
+            ...place
           },
           zIndex: 1,
           animation: this.MapConstr.Animation.DROP,  // 下落动画
@@ -282,12 +259,13 @@ class App extends React.Component {
       });
 
       markers.push(marker);
+      bounds.extend(marker.position);  // 将 marker 加入到界限集合中
 
       this.MapConstr.event.addListener(marker, 'click', () => {
         if (lastMarker) {
           lastMarker.setZIndex(1)
         }
-        
+
         marker.setZIndex(100);  // 当前点击的 marker 置顶
         lastMarker = marker;
         this.setCurPlaceId(marker.data.id, 'map');
@@ -295,12 +273,26 @@ class App extends React.Component {
       })
     });
 
-    this.setState({markers})
+    if (markers.length) {
+      let boundsCenter = bounds.getCenter();
+
+      // 缩放平移地图，使所有 marker 都显示出来
+      map.setCenter(boundsCenter);
+      map.fitBounds(bounds);
+
+      this.buildRadiusCircle(map, boundsCenter);
+    }
+
+    this.setState({markers});
   }
 
   // 移除 markers
   removeMarkers() {
-    this.state.markers.forEach(marker => marker.setMap(null));
+    this.state.markers.forEach(marker => {
+      marker.setMap(null);
+      marker = null;  // 释放内存
+    });
+
     this.setState({markers: []});
   }
 
@@ -326,8 +318,18 @@ class App extends React.Component {
 
     let infoWindow = new this.MapConstr.InfoWindow({
       content: `<div class="map-info-window">
-          <h4>${data.name}</h4>
-          <p><strong>地址:</strong> ${data.address}</p>
+          <h4 class="info-title">${data.name}</h4>
+          <div class="info-body">
+            <div class="info-content">
+              <p><strong>地址：</strong>${data.location.display_address.join(', ')}</p>
+              <p><strong>座机：</strong>${data.display_phone}</p>
+              <p><strong>价格：</strong>${data.price}</p>
+              <p><strong>评分：</strong>${data.rating}</p>
+            </div>
+            <figure class="info-photo">
+              <img src="${data.image_url || markerIcon}" alt="${data.name}" />
+            </figure>
+          </div>
         </div>`
     });
 
@@ -337,7 +339,7 @@ class App extends React.Component {
   }
 
   // 关闭地图上的 infoWindow
-  closeInfoWindow(e) {
+  closeInfoWindow() {
     if (this.state.infoWindow) {
       this.state.infoWindow.close();
       this.setState({infoWindow: null});
@@ -393,11 +395,11 @@ class App extends React.Component {
                   />
                 </div>
               </div>
-            </form>        
+            </form>
             <List className="list"
               items={this.state.places}
               activeId={this.state.placeId}
-              onItemClick={(id) => this.setCurPlaceId(id, 'list')}
+              onItemClick={(id) => this.onListClick(id)}
             />
           </aside>
           <Map className="map-container" id="mapBox"
@@ -405,12 +407,11 @@ class App extends React.Component {
             mapNotice={this.state.mapNotice}
             onMapReady={(MapConstr, map) => this.initSearch(MapConstr, map)}
             onMapClick={() => this.closeInfoWindow()}
-            onMapDragend={(map) => this.onMapEvent(map, 'dragend')}
-            onMapZoomChanged={(map) => this.onMapEvent(map, 'zoom_changed')}
           >
             <p className="sources-tip">
-              搜索数据来源：<a href="https://foursquare.com/"
-              target="_blank" rel="noopener noreferrer">Foursquare</a>
+              搜索数据来自：<a href="https://www.yelp.com/" target="_blank" rel="noopener noreferrer">
+                <img src="https://s3-media2.fl.yelpcdn.com/assets/srv0/yelp-shared-styles/58cfc999e1f5/lib/img/logos/burst_desktop_xsmall_outline.png" />
+                Yelp</a>
             </p>
           </Map>
         </main>
