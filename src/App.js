@@ -283,6 +283,11 @@ class App extends React.Component {
       this.buildRadiusCircle(map, boundsCenter);
     }
 
+    // 避免视野过低
+    if (map.getZoom() > 19) {
+      map.setZoom(19)
+    }
+
     this.setState({markers});
   }
 
@@ -318,7 +323,9 @@ class App extends React.Component {
 
     let infoWindow = new this.MapConstr.InfoWindow({
       content: `<div class="map-info-window">
-          <h4 class="info-title">${data.name}</h4>
+          <h4 class="info-title">
+            <a href="${data.url}" target="_blank" rel="noopener noreferrer">${data.name}</a>
+          </h4>
           <div class="info-body">
             <div class="info-content">
               <p><strong>地址：</strong>${data.location.display_address.join(', ')}</p>
@@ -410,7 +417,7 @@ class App extends React.Component {
           >
             <p className="sources-tip">
               搜索数据来自：<a href="https://www.yelp.com/" target="_blank" rel="noopener noreferrer">
-                <img src="https://s3-media2.fl.yelpcdn.com/assets/srv0/yelp-shared-styles/58cfc999e1f5/lib/img/logos/burst_desktop_xsmall_outline.png" />
+                <img src="https://s3-media2.fl.yelpcdn.com/assets/srv0/yelp-shared-styles/58cfc999e1f5/lib/img/logos/burst_desktop_xsmall_outline.png" alt="Yelp" />
                 Yelp</a>
             </p>
           </Map>
