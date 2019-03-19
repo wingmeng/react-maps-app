@@ -1,54 +1,21 @@
-import today from './tools/today';
+// Yelp API 不支持 localhost 访问，故使用代理服务器来响应客户端的 Yelp API 请求
+// `../server/index.js`
+const api = 'http://localhost:3001/yelp';
 
-const api = 'https://api.foursquare.com/v2/venues/';
-const clientId = 'HCFKSRBOE34ZWFFURMZYDY1F4HT2D3OHGOXFMU12H5Y3LTVU';
-const clientSecret = 'G4MBBX2XNBGQJYQ3QJJY1N2ZPVTB1R05CHPT5N5LM3X4P5IL';
+// https://www.yelp.com/developers/documentation/v3/all_category_list
+const categories = 'hotels';
 
-// 类别 id
-// 详情：https://developer.foursquare.com/docs/resources/categories
-const categoryId =
-  '4bf58dd8d48988d1e2931735'  // Art Gallery
-  // '4bf58dd8d48988d1f8931735,' +  // Bed & Breakfast
-  // '4bf58dd8d48988d1ee931735,' +  // Hostel
-  // '5bae9231bedf3950379f89cb,' +  // Inn
-  // '4bf58dd8d48988d1fb931735';    // Motel
-
-// 搜索地点列表
-// https://developer.foursquare.com/docs/api/venues/search  
-export const searchList = (sw, ne, query) => {
-  if (!(sw && ne)) {
-    return new Error(`\`sw\` or \`ne\` is required`)
+export const searchNearby = (lat, lng, query, radius) => {
+  if (!(lat && lng)) {
+    return new Error(`\`lat\` or \`lng\` is required`)
   }
 
-  return fetch(`${api}/search
-    ?client_id=${clientId}
-    &client_secret=${clientSecret}
-    &category_id=${categoryId}
-    &v=${today()}
-    &query=${query}
-    &sw=${sw}
-    &ne=${ne}
-    &intent=browse
+  return fetch(`${api}/businesses_search
+    ?categories=${categories}
+    &latitude=${lat}
+    &longitude=${lng}
+    &term=${query}
+    &radius=${radius}
     `.replace(/[\n\s]*/gm, ''))
-    .then(res => res.json());
+    .then(res => res.json())
 }
-
-// 地点详情
-// https://developer.foursquare.com/docs/api/venues/details
-export const getDetails = (PlaceId) =>
-  fetch(`${api}/${PlaceId}
-    ?client_id=${clientId}
-    &client_secret=${clientSecret}
-    &id=${PlaceId}
-    &v=${today()}
-    `.replace(/[\n\s]*/gm, ''))
-    .then(res => res.json());
-
-// 地点照片
-// https://developer.foursquare.com/docs/api/venues/photos
-export const getPhotos = (PlaceId) =>
-  fetch(`${api}/${PlaceId}/photos
-    ?client_id=${clientId}
-    &client_secret=${clientSecret}
-    `.replace(/[\n\s]*/gm, ''))
-    .then(res => res.json());     
