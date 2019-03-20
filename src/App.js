@@ -75,27 +75,29 @@ class App extends React.Component {
     this.placeMap = map;
     this.mapZoomLv = map.getZoom();
 
-    [
-      'idle',  // “空闲”（当前瓦片图加载完毕）事件
-      'dragend'  // 拖动结束事件
-    ].forEach(evtName => {
-      let handle = MapConstr.event.addListener(map, evtName, () => {
-        const { lat, lng } = map.getCenter();
+    const search = () => {
+      let center = map.getCenter();
 
-        this.onSearch(lat(), lng())
-          .then(() => {
-            this.buildMarkers(map);
+      if (!center) {
+        return
+      }
 
-            // 完成初始化搜索后移除 idle 事件
-            if (evtName === 'idle') {
-              MapConstr.event.removeListener(handle)
-            }
-          })
-          .catch(err => {
-            this.setGlobalNotify(err)
-          })
-      })
-    })
+      let { lat, lng } = center;
+
+      this.onSearch(lat(), lng())
+        .then(() => {
+          this.buildMarkers(map);
+        })
+        .catch(err => {
+          this.setGlobalNotify(err)
+        })
+    };
+
+    // “空闲”（当前瓦片图加载完毕）事件（绑定一次）
+    MapConstr.event.addListenerOnce(map, 'idle', search);
+
+    // 拖动结束事件
+    MapConstr.event.addListener(map, 'dragend', search);
   }
 
   onListClick(id) {
@@ -416,9 +418,7 @@ class App extends React.Component {
             onMapClick={() => this.closeInfoWindow()}
           >
             <p className="sources-tip">
-              搜索数据来自：<a href="https://www.yelp.com/" target="_blank" rel="noopener noreferrer">
-                <img src="https://s3-media2.fl.yelpcdn.com/assets/srv0/yelp-shared-styles/58cfc999e1f5/lib/img/logos/burst_desktop_xsmall_outline.png" alt="Yelp" />
-                Yelp</a>
+              搜索数据来自：<a href="https://www.yelp.com/" target="_blank" rel="noopener noreferrer">Yelp</a>
             </p>
           </Map>
         </main>
