@@ -2,13 +2,11 @@
 
 一个酒店（宾馆）地图搜索的网页应用，主要为用户提供附近酒店的地图位置标注、关键词搜索、酒店详情等服务。
 
-![screenshot pc1](/doc/images/screenshot_pc1.png)
+![screenshot pc](/doc/images/screenshot_pc.png)
 
-![screenshot pc1](/doc/images/screenshot_pc2.png)
-
-![screenshot mobile1](/doc/images/screenshot_mobile1.png)
-![screenshot mobile1](/doc/images/screenshot_mobile2.png)
-![screenshot mobile1](/doc/images/screenshot_mobile3.png)
+![screenshot mobile](/doc/images/screenshot_mobile1.png)
+![screenshot mobile](/doc/images/screenshot_mobile2.png)
+![screenshot mobile](/doc/images/screenshot_mobile3.png)
 
 ## 安装及部署
 
