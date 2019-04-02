@@ -14,16 +14,15 @@ function List(props) {
   return (
     <ul aria-label="Hotels list" className={props.className}>
       {!items.length && (
-        <li className="text-muted"><small>当前列表为空</small></li>
+        <li className="is-empty">
+          <small className="text-muted">当前列表为空</small>
+        </li>
       )}
       {items.map(item => (
-        <li key={item.id}>
-          {/* 使用锚点链接 */}
-          <a href={`#${item.id}`} id={item.id} title={item.name}
-            className={props.activeId === item.id ? 'is-active' : ''}
-            onClick={() => props.onItemClick && props.onItemClick(item.id)}
-          >{item.name}</a>
-        </li>
+        <li key={item.id} id={item.id} title={item.name}
+          className={props.activeId === item.id ? 'is-active' : ''}
+          onClick={() => props.onItemClick && props.onItemClick(item.id)}
+        >{item.name}</li>
       ))}
     </ul>
   )

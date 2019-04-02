@@ -115,9 +115,10 @@ class App extends React.Component {
     this.setState({placeId: id});
 
     if (from === 'map') {
-      // 地图可以使用路由吗？
-      // 暂时使用 hash 代替，用以将对应列表项滚动到可视区，但无法像路由那样有历史记录
-      window.location.hash = this.state.placeId;
+      // 将对应列表项滚动到可视区
+      document.getElementById(id).scrollIntoView({
+        behavior: 'smooth'
+      });
     } else if (from === 'list') {
       this.buildInfoWindow(this.getCurMarker(id));
     }

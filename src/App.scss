@@ -81,8 +81,7 @@ a {color: $color-info;}
   overflow: auto;
   list-style: none;
 
-  a {
-    display: block;
+  > li {
     height: 32px;
     margin-bottom: 5px;
     line-height: 32px;
@@ -95,6 +94,7 @@ a {color: $color-info;}
     background: url("./icon/marker.png") left center no-repeat;
     background-size: 1em auto;
     opacity: .7;
+    cursor: pointer;
 
     &:hover,
     &.is-active {
@@ -102,8 +102,12 @@ a {color: $color-info;}
       opacity: 1;
     }
 
-    &.is-active {
-      box-shadow: 0 1px 0;
+    &.is-active {box-shadow: 0 1px 0;}
+
+    &.is-empty {
+      background: none;
+      opacity: 1;
+      cursor: default;
     }
   }
 }
